@@ -16,6 +16,20 @@ Amplify Gen2 backend is wired for:
 - Install deps: `npm install`
 - Run dev server: `npm run dev`
 
+## Deploy (Vercel)
+
+This frontend can be deployed on Vercel. The Amplify Gen2 backend is still managed via the `amplify/` folder.
+
+1. In Vercel, set the Project Root to this folder (`repo/`).
+2. Build command is set via `vercel.json` to `npm run vercel-build`.
+3. To connect the deployed frontend to an existing Amplify backend environment, configure these environment variables in Vercel:
+
+- `AMPLIFY_APP_ID`: the Amplify App ID that hosts your Gen2 backend environment
+- (optional) `AMPLIFY_BRANCH`: defaults to `VERCEL_GIT_COMMIT_REF` or `main`
+
+`npm run vercel-build` will attempt to run `npx ampx generate outputs ...` at build time.
+This requires AWS credentials to be available in the build environment (for example, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION`) with permissions to read Amplify app/branch outputs.
+
 ## Amplify Gen2 (local sandbox)
 
 This repo expects `amplify_outputs.json` to exist at the project root.
