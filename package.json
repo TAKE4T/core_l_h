@@ -10,8 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "amplify:sandbox": "amplify sandbox",
-    "amplify:sandbox:delete": "amplify sandbox delete"
+    "amplify:sandbox": "npx ampx sandbox",
+    "amplify:sandbox:delete": "npx ampx sandbox delete"
   },
   "repository": {
     "type": "git",
