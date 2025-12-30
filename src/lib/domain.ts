@@ -8,6 +8,48 @@ export type TagStatus = "ACTIVE" | "MERGED" | "DEPRECATED";
 
 export type Id = string;
 
+export interface Owner {
+  id: Id;
+  userSlug: string; // globally unique
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoreLanguageArtifact {
+  id: Id;
+  ownerId: Id;
+
+  content: string; // CLA text
+  version: number;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContentPlanBatch {
+  id: Id;
+  ownerId: Id;
+  claId: Id;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TitleIdeaStatus = "PROPOSED" | "SELECTED" | "REJECTED";
+
+export interface TitleIdea {
+  id: Id;
+  ownerId: Id;
+  batchId: Id;
+
+  title: string;
+  status: TitleIdeaStatus;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Tag {
   id: Id;
   scope: TagScope;
@@ -48,6 +90,9 @@ export interface Article {
   content: string;
   excerpt: string;
 
+  // Outline is saved; format is implementation detail (markdown/text).
+  outline?: string;
+
   tagIds: Id[];
 
   readCompleteCount: number;
@@ -57,4 +102,9 @@ export interface Article {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
+
+  // Optional links to upstream generation artifacts.
+  claId?: Id;
+  contentPlanBatchId?: Id;
+  titleIdeaId?: Id;
 }

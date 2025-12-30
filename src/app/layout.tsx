@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "core_l_h",
-  description: "MVP scaffold",
+  title: "Core Language Hub",
+  description: "Core Language Hub (MVP)",
 };
 
 export default function RootLayout({
