@@ -5,10 +5,6 @@
 /.next
 /out
 
-# Amplify Gen2 sandbox / local outputs
-.amplify/
-
-
 # misc
 .DS_Store
 *.tsbuildinfo
