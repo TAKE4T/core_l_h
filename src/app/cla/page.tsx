@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AdminContainer } from "@/components/admin/AdminContainer";
+import { DashboardPage } from "@/components/admin/DashboardPage";
+import { PrimaryButton } from "@/components/admin/PrimaryButton";
+import { SecondaryButton } from "@/components/admin/SecondaryButton";
+import { SectionCard } from "@/components/admin/SectionCard";
+import { TabNavigation } from "@/components/admin/TabNavigation";
 import type { LocalDB } from "@/lib/localDb";
 import { createClaAndBatch, getDemoOwner, loadLocalDb, saveLocalDb } from "@/lib/localDb";
 
@@ -26,69 +32,76 @@ export default function ClaPage() {
   const owner = db ? getDemoOwner(db) : null;
 
   if (!mounted || !db || !owner) {
-    return <main className="min-h-screen p-8" />;
+    return <main className="min-h-screen bg-gray-50 font-admin" />;
   }
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">CLA（コアランゲージ）作成</h1>
-          <Link href="/" className="text-sm text-neutral-600 underline">
+    <DashboardPage userName={owner.displayName} planLabel="フリープラン">
+      <TabNavigation
+        activeTab="cla"
+        onTabChange={(tab) => {
+          if (tab === "cla") return;
+          if (tab === "title") return router.push("/");
+          if (tab === "article") return router.push("/");
+        }}
+      />
+      <AdminContainer>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <div className="text-gray-900">CLA（コアランゲージ）作成</div>
+            <p className="mt-1 text-sm text-gray-600">SSOT: CLA作成後にタイトル案を10件生成します。</p>
+          </div>
+          <Link href="/" className="text-sm text-gray-700 underline hover:text-gray-900">
             戻る
           </Link>
         </div>
 
-        <p className="text-sm text-neutral-600">
-          SSOT: CLA作成後にタイトル案を10件生成します。
-        </p>
+        <SectionCard title="CLA入力" description="例：私は◯◯のために、△△を□□という考え方で実現する……">
+          <textarea
+            className="min-h-48 w-full rounded border border-gray-200 p-3 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
+            value={claText}
+            onChange={(e) => setClaText(e.target.value)}
+          />
 
-        <textarea
-          className="min-h-48 w-full rounded border border-neutral-300 p-3 text-sm"
-          placeholder="例：私は◯◯のために、△△を□□という考え方で実現する……"
-          value={claText}
-          onChange={(e) => setClaText(e.target.value)}
-        />
+          {error ? <div className="mt-2 text-sm text-red-600">{error}</div> : null}
 
-        {error ? <div className="text-sm text-red-600">{error}</div> : null}
+          <div className="mt-4 flex flex-wrap gap-3">
+            <PrimaryButton
+              type="button"
+              onClick={() => {
+                setError(null);
+                const text = claText.trim();
+                if (text.length < 10) {
+                  setError("CLAはもう少し詳しく（10文字以上）書いてください");
+                  return;
+                }
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
-            onClick={() => {
-              setError(null);
-              const text = claText.trim();
-              if (text.length < 10) {
-                setError("CLAはもう少し詳しく（10文字以上）書いてください");
-                return;
-              }
+                const latest = loadLocalDb();
+                const { cla, batch, titleIdeas } = createClaAndBatch({
+                  ownerId: owner.id,
+                  claText: text,
+                });
 
-              const latest = loadLocalDb();
-              const { cla, batch, titleIdeas } = createClaAndBatch({
-                ownerId: owner.id,
-                claText: text,
-              });
+                latest.clas.unshift(cla);
+                latest.contentPlanBatches.unshift(batch);
+                latest.titleIdeas.unshift(...titleIdeas);
+                saveLocalDb(latest);
 
-              latest.clas.unshift(cla);
-              latest.contentPlanBatches.unshift(batch);
-              latest.titleIdeas.unshift(...titleIdeas);
-              saveLocalDb(latest);
+                router.push(`/plan/${batch.id}`);
+              }}
+            >
+              保存してタイトル案を生成
+            </PrimaryButton>
 
-              router.push(`/plan/${batch.id}`);
-            }}
-          >
-            保存してタイトル案を生成
-          </button>
-
-          <Link
-            href="/"
-            className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-medium"
-          >
-            キャンセル
-          </Link>
-        </div>
-      </div>
-    </main>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              キャンセル
+            </Link>
+          </div>
+        </SectionCard>
+      </AdminContainer>
+    </DashboardPage>
   );
 }

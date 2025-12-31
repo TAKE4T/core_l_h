@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AdminContainer } from "@/components/admin/AdminContainer";
+import { DashboardPage } from "@/components/admin/DashboardPage";
+import { PrimaryButton } from "@/components/admin/PrimaryButton";
+import { SectionCard } from "@/components/admin/SectionCard";
+import { TabNavigation } from "@/components/admin/TabNavigation";
 import {
   getDemoOwner,
   loadLocalDb,
@@ -31,7 +36,7 @@ export default function PlanBatchPage() {
     setDb(loadLocalDb());
   }, [mounted, nonce]);
 
-  if (!mounted || !db) return <main className="min-h-screen p-8" />;
+  if (!mounted || !db) return <main className="min-h-screen bg-gray-50 font-admin" />;
 
   const owner = getDemoOwner(db);
   const batch = db.contentPlanBatches.find((b) => b.id === batchId && b.ownerId === owner.id);
@@ -41,78 +46,87 @@ export default function PlanBatchPage() {
 
   if (!batch) {
     return (
-      <main className="min-h-screen p-8">
-        <div className="mx-auto w-full max-w-2xl">
-          <h1 className="text-xl font-bold">バッチが見つかりません</h1>
-          <div className="mt-3">
-            <Link href="/" className="text-sm underline">
+      <DashboardPage userName={owner.displayName} planLabel="フリープラン">
+        <TabNavigation
+          activeTab="title"
+          onTabChange={(tab) => {
+            if (tab === "cla") return router.push("/cla");
+            if (tab === "title") return;
+            if (tab === "article") return router.push("/");
+          }}
+        />
+        <AdminContainer>
+          <SectionCard title="バッチが見つかりません">
+            <Link href="/" className="text-sm text-gray-700 underline hover:text-gray-900">
               トップへ戻る
             </Link>
-          </div>
-        </div>
-      </main>
+          </SectionCard>
+        </AdminContainer>
+      </DashboardPage>
     );
   }
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">タイトル案（10件）</h1>
-          <Link href="/" className="text-sm text-neutral-600 underline">
+    <DashboardPage userName={owner.displayName} planLabel="フリープラン">
+      <TabNavigation
+        activeTab="title"
+        onTabChange={(tab) => {
+          if (tab === "cla") return router.push("/cla");
+          if (tab === "title") return;
+          if (tab === "article") return router.push("/");
+        }}
+      />
+      <AdminContainer>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <div className="text-gray-900">タイトル案（10件）</div>
+            <div className="mt-1 text-sm text-gray-600">batch: {new Date(batch.createdAt).toLocaleString()}</div>
+          </div>
+          <Link href="/" className="text-sm text-gray-700 underline hover:text-gray-900">
             戻る
           </Link>
         </div>
 
-        <div className="text-sm text-neutral-600">batch: {new Date(batch.createdAt).toLocaleString()}</div>
-
-        <ul className="flex flex-col gap-2">
+        <div className="space-y-4">
           {titleIdeas.map((ti) => (
-            <li key={ti.id} className="rounded border border-neutral-200 bg-white p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="font-medium">{ti.title}</div>
-                  <div className="mt-1 text-xs text-neutral-500">status: {ti.status}</div>
-                </div>
-                <button
-                  type="button"
-                  className="shrink-0 rounded bg-neutral-900 px-3 py-2 text-xs font-medium text-white"
-                  onClick={() => {
-                    const latest = loadLocalDb();
-                    const owner2 = getDemoOwner(latest);
-                    const b2 = latest.contentPlanBatches.find((b) => b.id === batchId);
-                    if (!b2) return;
+            <SectionCard key={ti.id} title={ti.title} description={`status: ${ti.status}`}>
+              <PrimaryButton
+                type="button"
+                onClick={() => {
+                  const latest = loadLocalDb();
+                  const owner2 = getDemoOwner(latest);
+                  const b2 = latest.contentPlanBatches.find((b) => b.id === batchId);
+                  if (!b2) return;
 
-                    // Update title statuses.
-                    latest.titleIdeas = latest.titleIdeas.map((x) => {
-                      if (x.batchId !== batchId || x.ownerId !== owner2.id) return x;
-                      if (x.id === ti.id) {
-                        return { ...x, status: "SELECTED", updatedAt: new Date().toISOString() };
-                      }
-                      return { ...x, status: x.status === "SELECTED" ? "PROPOSED" : x.status };
-                    });
+                  // Update title statuses.
+                  latest.titleIdeas = latest.titleIdeas.map((x) => {
+                    if (x.batchId !== batchId || x.ownerId !== owner2.id) return x;
+                    if (x.id === ti.id) {
+                      return { ...x, status: "SELECTED", updatedAt: new Date().toISOString() };
+                    }
+                    return { ...x, status: x.status === "SELECTED" ? "PROPOSED" : x.status };
+                  });
 
-                    const article = selectTitleAndCreateDraft({
-                      ownerId: owner2.id,
-                      batchId: b2.id,
-                      claId: b2.claId,
-                      titleIdeaId: ti.id,
-                      title: ti.title,
-                    });
+                  const article = selectTitleAndCreateDraft({
+                    ownerId: owner2.id,
+                    batchId: b2.id,
+                    claId: b2.claId,
+                    titleIdeaId: ti.id,
+                    title: ti.title,
+                  });
 
-                    latest.articles.unshift(article);
-                    saveLocalDb(latest);
-                    setNonce((n) => n + 1);
-                    router.push(`/article/${article.id}`);
-                  }}
-                >
-                  この記事を作る
-                </button>
-              </div>
-            </li>
+                  latest.articles.unshift(article);
+                  saveLocalDb(latest);
+                  setNonce((n) => n + 1);
+                  router.push(`/article/${article.id}`);
+                }}
+              >
+                このタイトルで記事を書く
+              </PrimaryButton>
+            </SectionCard>
           ))}
-        </ul>
-      </div>
-    </main>
+        </div>
+      </AdminContainer>
+    </DashboardPage>
   );
 }

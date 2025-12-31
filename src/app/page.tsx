@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { AdminContainer } from "@/components/admin/AdminContainer";
+import { DashboardPage } from "@/components/admin/DashboardPage";
+import { PrimaryButton } from "@/components/admin/PrimaryButton";
+import { SecondaryButton } from "@/components/admin/SecondaryButton";
+import { SectionCard } from "@/components/admin/SectionCard";
+import { TabNavigation } from "@/components/admin/TabNavigation";
 import { getDemoOwner, loadLocalDb, resetLocalDb, saveLocalDb } from "@/lib/localDb";
 
 export default function HomePage() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [nonce, setNonce] = useState(0);
 
@@ -23,7 +31,7 @@ export default function HomePage() {
   }, [mounted, nonce]);
 
   if (!mounted || !db) {
-    return <main className="min-h-screen p-8" />;
+    return <main className="min-h-screen bg-gray-50 font-admin" />;
   }
 
   const owner = getDemoOwner(db);
@@ -55,146 +63,135 @@ export default function HomePage() {
     .filter((b) => b.ownerId === owner.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  return (
-    <main className="min-h-screen p-8">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <header className="flex flex-col gap-2">
-          <div className="text-sm text-neutral-500">Core Language Hub（MVP）</div>
-          <h1 className="text-3xl font-bold leading-tight">コアランゲージハブ</h1>
-          <p className="text-neutral-700">
-            CLA → タイトル案10件 → アウトライン承認 → 本文生成（デモ）
-          </p>
-        </header>
+  const drafts = db.articles
+    .filter((a) => a.ownerId === owner.id && a.status === "DRAFT")
+    .slice()
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 20);
 
-        <section className="flex flex-wrap gap-3">
+  return (
+    <DashboardPage userName={owner.displayName} planLabel="フリープラン">
+      <TabNavigation
+        activeTab="cla"
+        onTabChange={(tab) => {
+          if (tab === "cla") return;
+          if (tab === "title") {
+            const latestBatch = batches[0];
+            if (latestBatch) return router.push(`/plan/${latestBatch.id}`);
+            return router.push("/cla");
+          }
+          if (tab === "article") {
+            const latestArticle = drafts[0] ?? published[0];
+            if (latestArticle) return router.push(`/article/${latestArticle.id}`);
+            return router.push("/cla");
+          }
+        }}
+      />
+      <AdminContainer>
+        <div className="mb-6">
+          <div className="text-gray-900">コアランゲージハブ</div>
+          <p className="mt-1 text-sm text-gray-600">CLA → タイトル案10件 → アウトライン承認 → 本文生成（デモ）</p>
+        </div>
+
+        <div className="mb-6 flex flex-wrap gap-3">
           <Link
             href="/cla"
-            className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
+            className="inline-flex items-center justify-center rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800"
           >
             CLAを作成する
           </Link>
-
-          <button
+          <SecondaryButton
             type="button"
-            className="rounded border border-neutral-300 bg-white px-4 py-2 text-sm font-medium"
             onClick={() => {
               resetLocalDb();
               setNonce((x) => x + 1);
             }}
           >
             ローカルデータをリセット
-          </button>
-        </section>
+          </SecondaryButton>
+        </div>
 
-        <section className="rounded border border-neutral-200 bg-white p-4">
-          <h2 className="text-lg font-semibold">公開記事（デモ）</h2>
-          {published.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-600">まだ公開記事がありません。</p>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-2">
-              {published.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{a.title}</div>
-                    <div className="truncate text-sm text-neutral-500">/u/{owner.userSlug}/{a.slug}</div>
-                  </div>
-                  <Link
-                    href={`/u/${owner.userSlug}/${a.slug}`}
-                    className="shrink-0 rounded border border-neutral-300 px-3 py-1 text-sm"
-                  >
-                    開く
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="rounded border border-neutral-200 bg-white p-4">
-          <h2 className="text-lg font-semibold">ランキング（全体）</h2>
-          <p className="mt-1 text-sm text-neutral-600">readCompleteCount のみ（SSOT）</p>
-          {overallRanking.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-600">まだ公開記事がありません。</p>
-          ) : (
-            <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5">
-              {overallRanking.map((a) => {
-                const aOwner = db.owners.find((o) => o.id === a.ownerId);
-                const userSlug = aOwner?.userSlug ?? "unknown";
-                return (
-                  <li key={a.id} className="rounded border border-neutral-200 bg-white p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{a.title}</div>
-                        <div className="truncate text-xs text-neutral-500">/u/{userSlug}/{a.slug}</div>
-                        <div className="mt-1 text-xs text-neutral-600">
-                          readCompleteCount: {a.readCompleteCount}
-                        </div>
-                      </div>
-                      <Link
-                        href={`/u/${userSlug}/${a.slug}`}
-                        className="shrink-0 rounded border border-neutral-300 px-3 py-1 text-sm"
-                      >
-                        開く
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </section>
-
-        <section className="rounded border border-neutral-200 bg-white p-4">
-          <h2 className="text-lg font-semibold">ランキング（ユーザー内）</h2>
-          <p className="mt-1 text-sm text-neutral-600">作者: {owner.displayName}</p>
-          {ownerRanking.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-600">まだ公開記事がありません。</p>
-          ) : (
-            <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5">
-              {ownerRanking.map((a) => (
-                <li key={a.id} className="rounded border border-neutral-200 bg-white p-3">
-                  <div className="flex items-center justify-between gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SectionCard title="下書き" description="作成中の記事">
+            {drafts.length === 0 ? (
+              <div className="text-sm text-gray-600">下書きはありません。</div>
+            ) : (
+              <ul className="space-y-3">
+                {drafts.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate font-medium">{a.title}</div>
-                      <div className="truncate text-xs text-neutral-500">/u/{owner.userSlug}/{a.slug}</div>
-                      <div className="mt-1 text-xs text-neutral-600">
-                        readCompleteCount: {a.readCompleteCount}
-                      </div>
+                      <div className="truncate text-gray-900">{a.title}</div>
+                      <div className="text-xs text-gray-500">updated: {new Date(a.updatedAt).toLocaleString()}</div>
                     </div>
-                    <Link
-                      href={`/u/${owner.userSlug}/${a.slug}`}
-                      className="shrink-0 rounded border border-neutral-300 px-3 py-1 text-sm"
-                    >
+                    <Link href={`/article/${a.id}`} className="text-sm text-gray-700 underline hover:text-gray-900">
                       開く
                     </Link>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
 
-        <section className="rounded border border-neutral-200 bg-white p-4">
-          <h2 className="text-lg font-semibold">タイトル案バッチ</h2>
-          {batches.length === 0 ? (
-            <p className="mt-2 text-sm text-neutral-600">まだ作成されていません。</p>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-2">
-              {batches.map((b) => (
-                <li key={b.id} className="flex items-center justify-between gap-3">
-                  <div className="text-sm text-neutral-700">{new Date(b.createdAt).toLocaleString()}</div>
-                  <Link
-                    href={`/plan/${b.id}`}
-                    className="shrink-0 rounded border border-neutral-300 px-3 py-1 text-sm"
-                  >
-                    開く
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-    </main>
+          <SectionCard title="公開記事" description="公開URLの確認">
+            {published.length === 0 ? (
+              <div className="text-sm text-gray-600">まだ公開記事がありません。</div>
+            ) : (
+              <ul className="space-y-3">
+                {published.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-gray-900">{a.title}</div>
+                      <div className="truncate text-xs text-gray-500">/u/{owner.userSlug}/{a.slug}</div>
+                    </div>
+                    <Link href={`/u/${owner.userSlug}/${a.slug}`} className="text-sm text-gray-700 underline hover:text-gray-900">
+                      開く
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+
+          <SectionCard title="ランキング（全体）" description="readCompleteCount のみ（SSOT）">
+            {overallRanking.length === 0 ? (
+              <div className="text-sm text-gray-600">まだ公開記事がありません。</div>
+            ) : (
+              <ol className="list-decimal pl-5 space-y-3">
+                {overallRanking.slice(0, 10).map((a) => {
+                  const aOwner = db.owners.find((o) => o.id === a.ownerId);
+                  const userSlug = aOwner?.userSlug ?? "unknown";
+                  return (
+                    <li key={a.id} className="text-sm">
+                      <div className="text-gray-900">{a.title}</div>
+                      <div className="text-xs text-gray-600">readCompleteCount: {a.readCompleteCount ?? 0}</div>
+                      <Link href={`/u/${userSlug}/${a.slug}`} className="text-xs text-gray-700 underline hover:text-gray-900">
+                        /u/{userSlug}/{a.slug}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </SectionCard>
+
+          <SectionCard title="タイトル案バッチ" description="作成済みの10件バッチ">
+            {batches.length === 0 ? (
+              <div className="text-sm text-gray-600">まだ作成されていません。</div>
+            ) : (
+              <ul className="space-y-3">
+                {batches.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-700">{new Date(b.createdAt).toLocaleString()}</div>
+                    <Link href={`/plan/${b.id}`} className="text-sm text-gray-700 underline hover:text-gray-900">
+                      開く
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+        </div>
+      </AdminContainer>
+    </DashboardPage>
   );
 }
